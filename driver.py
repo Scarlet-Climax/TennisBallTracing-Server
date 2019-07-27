@@ -1,6 +1,8 @@
 import socket
 import time
 import json
+from XJBXX import RECV,SEND
+from para import szX
 class suibianxiexie:
     'zhe sha'
     def __init__(self):
@@ -56,7 +58,7 @@ class suibianxiexie:
             self.__b()
     def __trace(self):
         if(self.X>0):
-            if(self.X<320/2):
+            if(self.X<szX/2):
                 self.__fl()
             else:
                 self.__fr()
@@ -108,22 +110,30 @@ class suibianxiexie:
         self.perform()
 ktt = suibianxiexie()
 def process(data):
-    global x,y,ktt
-    jdata=json.loads(data)
-    ktt.process(jdata)
+    global ktt
+    #print(data)
+    try:
+        jdata=json.loads(data)
+        ktt.process(jdata)
+    except:
+        pass
+    #ktt.process(jdata)
     #print("x:{},y:{}".format(jdata[0]["x"],jdata[0]["y"]))
 while 1:
     
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('192.168.1.109', 9920))
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(('192.168.43.116', 9920))
     server.listen(5)
     print("waiting")
     connect, addr = server.accept()
     print("{} connected".format(addr))
     while 1:
         try:
-            data=connect.recv(1024)
+            header,data=RECV(connect)
+            #data=connect.recv(65535)
         except:
+            connect.sendall("What's your problem?")
             print("connection failed!!!")
             break
         if not data:
