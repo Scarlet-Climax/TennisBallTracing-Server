@@ -1,6 +1,7 @@
 import socket
 import time
 import json
+from local_driver import motor
 from XJBXX import RECV,SEND
 from para import szX
 class suibianxiexie:
@@ -14,36 +15,75 @@ class suibianxiexie:
         self.down=0
         self.X=0
         self.Y=0
+        self.J=motor(16,20, 21)
+        self.L=motor(23, 24, 18)
+        self.R=motor(22, 17, 27)
+        self.J.start(0)
+        self.L.start(0)
+        self.R.start(0)
+        self.soft=0
     def stop(self):
         print("stop")
-        self.__init__()
+        self.mode = "remote"
+        self.jogging = 0
+        self.left = 0
+        self.right = 0
+        self.up = 0
+        self.down = 0
+        self.X = 0
+        self.Y = 0
+        self.soft=0
     def __jog(self):
-        print("jog")
-        pass
+        if (self.jogging):
+
+            print("jog")
+            if self.soft==1:
+                self.J.start(10*self.jogging)
+            else:
+                self.J.start(100*self.jogging)
+            self.L.start(0)
+            self.R.start(0)
+        else:
+            self.J.start(0)
+            self.L.start(0)
+            self.R.start(0)
     def __f(self):      #forward
         print("forward")
-        pass
+        self.J.start(0)
+        self.L.start(100)
+        self.R.start(100)
     def __b(self):      #back
         print("back")
-        pass
+        self.J.start(0)
+        self.L.start(-100)
+        self.R.start(-100)
     def __fl(self):     #forward-left
         print("forward-left")
-        pass
+        self.J.start(0)
+        self.L.start(100)
+        self.R.start(30)
     def __fr(self):     #forward-right
         print("forward-right")
-        pass
+        self.J.start(0)
+        self.L.start(30)
+        self.R.start(100)
     def __bl(self):     #back-left
         print("back-left")
-        pass
+        self.J.start(0)
+        self.L.start(-30)
+        self.R.start(-100)
     def __br(self):     #back-right
         print("back-right")
-        pass
+        self.J.start(0)
+        self.L.start(-100)
+        self.R.start(-30)
     def __zibi(self):   #turn round
         print("zibi")
-        pass
+        self.J.start(0)
+        self.L.start(100)
+        self.R.start(-100)
     def __remote(self):
-        if (self.jogging):
-            self.__jog()
+        self.__jog()
         if(self.up and self.left):
             self.__fl()
         elif (self.up and self.right):
@@ -107,6 +147,11 @@ class suibianxiexie:
         elif k==ord("r"):
             print("r")
             self.mode="remote"
+        elif k==ord("l"):
+            print("l")
+            self.jogging = -1
+        elif k==ord("p"):
+            self.soft = 1-self.soft
         self.perform()
 ktt = suibianxiexie()
 def process(data):
@@ -123,7 +168,7 @@ while 1:
     
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(('192.168.43.116', 9920))
+    server.bind(('192.168.1.107', 9920))
     server.listen(5)
     print("waiting")
     connect, addr = server.accept()
@@ -146,3 +191,4 @@ while 1:
         #print("Received:{}\r".format(data))
     server.close()
     ktt.stop()
+GPIO.cleanup()

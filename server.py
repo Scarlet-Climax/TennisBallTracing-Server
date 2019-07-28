@@ -8,6 +8,7 @@ from para import sz
 def initCamera():
     camera = PiCamera()
     camera.resolution = sz
+    camera.hflip = camera.vflip=True
     camera.framerate = 32
     camera.iso = 800
     camera.brightness = 50
@@ -20,7 +21,7 @@ while 1:
     rawCapture = PiRGBArray(camera, size=sz)
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(('192.168.43.116',10011))
+    server.bind(('192.168.1.107',10011))
     server.listen(5)
     print("waiting")
     connect,addr=server.accept()
