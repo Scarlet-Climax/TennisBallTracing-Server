@@ -4,6 +4,7 @@ import json
 
 dataBuffer=bytes()
 headerSize=12
+bias = 0
 
 def RECV(conn):
     global dataBuffer
@@ -22,6 +23,13 @@ def RECV(conn):
                     break
                 body = dataBuffer[headerSize:headerSize+bodySize]
                 dataBuffer = dataBuffer[headerSize + bodySize:]
+                jdata = json.loads(body)[0]
+                diff = -jdata['time']+time.time()+bias
+                print(diff, len(dataBuffer))
+                if diff > 0.07:
+                    # tmpdata = conn.recv(1)
+                    dataBuffer = bytes()
+                    print('clear')
                 return headPack, body
         else:
             dataBuffer=bytes()
@@ -45,5 +53,6 @@ def SENDI(client, body):
     cmd = 101
     header = [ver, body.__len__(), cmd]
     headPack = struct.pack("!3I", *header)
-    client.send(headPack)
+    client.sendall(headPack)
     client.sendall(body)
+

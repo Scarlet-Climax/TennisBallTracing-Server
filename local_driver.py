@@ -25,15 +25,15 @@ class motor:
 
 
 if __name__ == '__main__':
-    p = motor(22, 17, 27)
-    q = motor(16,20, 21)
-    r = motor(23, 24, 18)
+    J = motor(16, 20, 21)
+    L = motor(23, 24, 18)
+    R = motor(22, 27, 17)
     time.sleep(1)
     try:
         while True:
-            p.start(0)
-            q.start(100)
-            r.start(0)
+            R.start(00)
+            L.start(0)
+            J.start(100)
             pass
     except:
         # GPIO.cleanup()

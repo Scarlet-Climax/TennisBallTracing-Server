@@ -1,9 +1,11 @@
 import socket
 import time
+import struct
 import json
 from local_driver import motor
-from XJBXX import RECV,SEND
-from para import szX
+# from XJBXX import RECV, SEND, dataBuffer
+from para import szX,IPADD
+startTime = 0
 class suibianxiexie:
     'zhe sha'
     def __init__(self):
@@ -17,13 +19,13 @@ class suibianxiexie:
         self.Y=0
         self.J=motor(16,20, 21)
         self.L=motor(23, 24, 18)
-        self.R=motor(22, 17, 27)
+        self.R=motor(22, 27, 17)
         self.J.start(0)
         self.L.start(0)
         self.R.start(0)
         self.soft=0
     def stop(self):
-        print("stop")
+        #print("stop")
         self.mode = "remote"
         self.jogging = 0
         self.left = 0
@@ -33,53 +35,56 @@ class suibianxiexie:
         self.X = 0
         self.Y = 0
         self.soft=0
+        self.J.start(0)
+        self.L.start(0)
+        self.R.start(0)
     def __jog(self):
         if (self.jogging):
 
-            print("jog")
+            #print("jog")
             if self.soft==1:
                 self.J.start(10*self.jogging)
             else:
                 self.J.start(100*self.jogging)
-            self.L.start(0)
-            self.R.start(0)
+            #self.L.start(0)
+            #self.R.start(0)
         else:
             self.J.start(0)
-            self.L.start(0)
-            self.R.start(0)
+            #self.L.start(0)
+            #self.R.start(0)
     def __f(self):      #forward
-        print("forward")
-        self.J.start(0)
+        #print("forward")
+        #self.J.start(0)
         self.L.start(100)
         self.R.start(100)
     def __b(self):      #back
-        print("back")
-        self.J.start(0)
+        #print("back")
+        #self.J.start(0)
         self.L.start(-100)
         self.R.start(-100)
     def __fl(self):     #forward-left
-        print("forward-left")
-        self.J.start(0)
+        #print("forward-left")
+        #self.J.start(0)
         self.L.start(100)
-        self.R.start(30)
+        self.R.start(0)
     def __fr(self):     #forward-right
-        print("forward-right")
-        self.J.start(0)
-        self.L.start(30)
+        #print("forward-right")
+        #self.J.start(0)
+        self.L.start(0)
         self.R.start(100)
     def __bl(self):     #back-left
-        print("back-left")
-        self.J.start(0)
-        self.L.start(-30)
+        #print("back-left")
+        #self.J.start(0)
+        self.L.start(0)
         self.R.start(-100)
     def __br(self):     #back-right
-        print("back-right")
-        self.J.start(0)
+        #print("back-right")
+        #self.J.start(0)
         self.L.start(-100)
-        self.R.start(-30)
+        self.R.start(0)
     def __zibi(self):   #turn round
-        print("zibi")
-        self.J.start(0)
+        #print("zibi")
+        #self.J.start(0)
         self.L.start(100)
         self.R.start(-100)
     def __remote(self):
@@ -154,28 +159,87 @@ class suibianxiexie:
             self.soft = 1-self.soft
         self.perform()
 ktt = suibianxiexie()
+
+dataBuffer=bytes()
+headerSize=12
+bias = 0
+
+def RECV(conn):
+    global dataBuffer
+    global headerSize
+    #print('Connected by', addr)
+    while True:
+        data = conn.recv(1024)
+        if data:
+            dataBuffer += data
+            while True:
+                if len(dataBuffer) < headerSize:
+                    break
+                headPack = struct.unpack('!3I', dataBuffer[:headerSize])
+                bodySize = headPack[1]
+                if len(dataBuffer) < headerSize+bodySize:
+                    break
+                body = dataBuffer[headerSize:headerSize+bodySize]
+                dataBuffer = dataBuffer[headerSize + bodySize:]
+                jdata = json.loads(body)[0]
+                diff = -jdata['time']+time.time()+bias
+                print(diff, len(dataBuffer))
+                if diff > 0.07:
+                    # tmpdata = conn.recv(1)
+                    dataBuffer = bytes()
+                    print('clear')
+                return headPack, body
+        else:
+            dataBuffer=bytes()
+            return 0,dataBuffer
+
+def SEND(client, body):
+    ver = 1
+    #body = json.dumps(dict(hello="world"))
+    #print(body)
+    cmd = 101
+    header = [ver, body.__len__(), cmd]
+    headPack = struct.pack("!3I", *header)
+    sendData = headPack + body.encode()
+    client.sendall(sendData)
+
+
+def SENDI(client, body):
+    ver = 2
+    #body = json.dumps(dict(hello="world"))
+    #print(body)
+    cmd = 101
+    header = [ver, body.__len__(), cmd]
+    headPack = struct.pack("!3I", *header)
+    client.sendall(headPack)
+    client.sendall(body)
+
+
 def process(data):
     global ktt
     #print(data)
-    try:
-        jdata=json.loads(data)
-        ktt.process(jdata)
-    except:
-        pass
+    # try:
+    jdata=json.loads(data)
+    # print(data, time.time()-jdata[0]['time'])
+    ktt.process(jdata)
+    # except:
+    #     pass
     #ktt.process(jdata)
     #print("x:{},y:{}".format(jdata[0]["x"],jdata[0]["y"]))
+
 while 1:
-    
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(('192.168.1.107', 9920))
+    server.bind((IPADD, 9920))
     server.listen(5)
     print("waiting")
     connect, addr = server.accept()
     print("{} connected".format(addr))
+    header, data = RECV(connect)
+    bias = json.loads(data)[0]['time'] - time.time()
     while 1:
         try:
-            header,data=RECV(connect)
+            header, data = RECV(connect)
             #data=connect.recv(65535)
         except:
             connect.sendall("What's your problem?")
